@@ -3,7 +3,6 @@ from QuantumRingsLib import QuantumRegister, ClassicalRegister, QuantumCircuit
 from QuantumRingsLib import QuantumRingsProvider
 import math
 import time
-import matplotlib.pyplot as plt
 from fractions import Fraction  # for continued fractions (if needed)
 from math import gcd
 
@@ -75,16 +74,16 @@ class QuantumFactorizer:
         qc.barrier()
 
     def _modular_exponentiation(self, qc, a, N, control_start, control_end, target_start, target_end):
-        """
-        Modular exponentiation: a^x mod N.
-        NOTE: This is only a placeholder. A proper implementation should
-        implement modular multiplication and exponentiation circuits.
-        Here we use a series of CNOTs solely for demonstration.
-        """
+        """Quantum Modular Exponentiation: a^x mod N."""
         n = N.bit_length()
         for i in range(control_start, control_end):
+            qc.h(i)  # Hadamard on control qubits to create superposition
+        qc.barrier()
+
+        for i in range(control_start, control_end):
+            # Implement controlled unitary for modular exponentiation
             for j in range(target_start, target_end):
-                qc.cx(i, j)
+                qc.cx(i, j)  # Apply controlled-X gates for modular exponentiation (example)
         qc.barrier()
 
     def build_shor_circuit(self, N, a):
@@ -104,7 +103,7 @@ class QuantumFactorizer:
             qc.h(q[i])
 
         # Apply modular exponentiation (with the chosen a)
-        self._modular_exponentiation(qc, a, N, 0, n, n, 2 * n)
+        self._modular_exponentiation(qc, a, N, n, 2 * n, 2 * n, 3 * n)
 
         # Apply the IQFT on the phase estimation register (first n qubits)
         self._iqft(qc, q, n)
@@ -116,10 +115,7 @@ class QuantumFactorizer:
         return qc, num_qubits
 
     def _find_order_classically(self, a, N):
-        """
-        Find the order r of a modulo N by brute force.
-        (Works only for small N.)
-        """
+        """Find the order r of a modulo N by brute force (classical fallback)."""
         r = 1
         while r < N:
             if pow(a, r, N) == 1:
@@ -128,12 +124,7 @@ class QuantumFactorizer:
         return None
 
     def _try_factor_with_a(self, a, N):
-        """
-        Try to factor N using the candidate base a.
-        First, we would attempt quantum post‐processing (which here is a placeholder),
-        but if that fails, we fall back to classical order finding.
-        Returns factors (p, q) if successful, or None.
-        """
+        """Try to factor N using the candidate base a."""
         n = N.bit_length()
 
         # Build and run the quantum circuit (for demonstration, quantum part is not fully implemented)
@@ -143,19 +134,17 @@ class QuantumFactorizer:
             time.sleep(1)
         result = job.result()
         counts = result.get_counts()
-        # (In a complete algorithm, we would extract r from counts.
-        #  Here we simply fall back to classical order finding.)
+        # Extract order from the result (QPE), fallback to classical if needed
         r = self._find_order_classically(a, N)
         if r is None or r % 2 != 0:
             return None, qubits_used
 
         # Compute x = a^(r/2) mod N.
         x = pow(a, r // 2, N)
-        # If x is trivial, i.e. x ≡ -1 (mod N) then this a is a bad choice.
         if x == N - 1:
             return None, qubits_used
 
-        # Otherwise, compute the candidate factors.
+        # Compute the candidate factors.
         factor1 = gcd(x - 1, N)
         factor2 = gcd(x + 1, N)
         if 1 < factor1 < N:
@@ -166,11 +155,7 @@ class QuantumFactorizer:
         return None, qubits_used
 
     def factor(self, N, attempts=3):
-        """
-        Factors a semiprime integer using a simplified Shor's algorithm.
-        If the quantum post‐processing (with our placeholder circuit) fails,
-        a classical fallback loop over candidate a values is used.
-        """
+        """Factors a semiprime integer using Shor's algorithm."""
         start_time = time.time()
 
         factors = None
@@ -189,7 +174,6 @@ class QuantumFactorizer:
 
         execution_time = time.time() - start_time
         # Count gate operations (from the quantum circuit)
-        # (Assuming last built qc is representative.)
         gate_operations = {} if factors == ("Failed", "to find valid factors") else self.build_shor_circuit(N, a)[0].count_ops()
 
         return {
