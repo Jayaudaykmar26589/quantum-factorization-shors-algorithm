@@ -1,87 +1,66 @@
-### Documentation: Shor's Algorithm for Semiprime Factorization
+Below is an explanation of the algorithm, its scalability considerations, and insights/novel aspects of our approach:
 
 ---
 
-### 1. **Algorithm Overview**
+### Algorithm Overview
 
-Shor's algorithm is a quantum algorithm designed for efficiently factoring large semiprime numbers (numbers that are the product of two prime numbers). This algorithm operates in polynomial time, which is exponentially faster than the best-known classical factoring algorithms.
+1. **Simplified Shor’s Algorithm Structure:**
+   - **Quantum Circuit Construction:**  
+     We begin by constructing a quantum circuit intended to perform the core of Shor’s algorithm—namely, order finding. The circuit is built using a phase estimation register (prepared in superposition), a modular exponentiation block, and an inverse Quantum Fourier Transform (IQFT).  
+     *Note:* In our implementation, the modular exponentiation block is a simplified placeholder (using CNOTs) rather than a full, fault-tolerant modular exponentiation circuit. This is acceptable for our small-number demonstrations.
 
-The algorithm consists of the following steps:
+   - **Fallback Classical Post-Processing:**  
+     Since the quantum modular exponentiation is a placeholder, the quantum output does not always yield a valid order \( r \) for the chosen base \( a \). Therefore, our approach incorporates a classical fallback:
+       - We iterate over candidate bases \( a \) (with \(\gcd(a, N)=1\)) and use a brute-force search to find the order \( r \) such that \( a^r \equiv 1 \pmod{N} \).
+       - Once an even order \( r \) is found and it satisfies the condition that \( a^{r/2} \not\equiv -1 \pmod{N} \), we compute the factors as:  
+         \[
+         \text{factor}_1 = \gcd(a^{r/2} - 1, N) \quad \text{and} \quad \text{factor}_2 = \gcd(a^{r/2} + 1, N).
+         \]
+       - This classical check ensures that we eventually obtain the correct prime factors even if the quantum portion is imperfect.
 
-- **Superposition**: Prepare quantum registers in a superposition of states representing potential exponents used for modular exponentiation.
-  
-- **Modular Exponentiation**: Use the quantum circuit to compute the modular exponentiation \( a^x \mod N \) for various values of \( x \), where \( a \) is a base and \( N \) is the semiprime being factored. This operation leverages quantum parallelism, which helps speed up the calculation.
-
-- **Inverse Quantum Fourier Transform (IQFT)**: After modular exponentiation, apply the inverse quantum Fourier transform to extract periodicity information from the quantum state. The period of the modular exponentiation is key to finding factors of \( N \).
-
-- **Measurement and Post-Processing**: Measure the quantum state and use classical post-processing to deduce factors of \( N \) from the results of quantum measurements.
-
----
-
-### 2. **Quantum Circuit Design**
-
-The quantum circuit in this implementation consists of:
-
-- **Quantum Register**: A set of qubits that holds the quantum state during the calculation.
-- **Classical Register**: Used for storing measurement results from the quantum register.
-- **Hadamard Gates**: Applied to create an initial superposition of all possible states.
-- **Controlled-NOT (CX) Gates**: Used for entangling qubits and enabling quantum operations.
-- **Inverse Quantum Fourier Transform (IQFT)**: Applied to extract periodicity and speed up the factoring process.
-
-For larger semiprimes, the circuit design is built dynamically, depending on the bit length of the semiprime, and the number of qubits increases accordingly.
+2. **Data Collection & Visualization:**
+   - For each semiprime, the algorithm records key metrics such as the number of qubits used, the total number of gate operations (broken down by type), and the execution time.
+   - These values are then tabulated and plotted to provide insights into resource usage and performance scaling with the bit size of the semiprime.
 
 ---
 
-### 3. **Scalability**
+### Scalability Considerations
 
-The scalability of Shor's algorithm depends on:
+1. **Quantum Circuit Size and Gate Count:**
+   - The circuit’s size grows with the bit length of the semiprime \( N \) (approximately \( O(n) \) qubits, where \( n \) is the number of bits in \( N \)). However, the modular exponentiation (if fully implemented) typically requires a number of gates that grows polynomially with \( n \).
+   - In our demonstration, while we see that the number of gate operations and qubits used increase linearly with the bit size, the actual gate counts would be significantly higher in a full implementation that performs modular arithmetic correctly.
 
-- **Number of Qubits**: The number of qubits required grows linearly with the bit length of the semiprime \( N \). For an \( N \)-bit semiprime, approximately \( 3n \) qubits are required, where \( n \) is the bit length of \( N \). For example, for a 100-bit semiprime, the circuit would require around 300 qubits. This means that as the size of \( N \) increases, the qubit requirements grow rapidly, which poses challenges for current quantum hardware due to limitations in available qubits.
-  
-- **Quantum Resources**: The gate complexity and execution time grow with the number of qubits, which can increase the total cost of performing the algorithm, especially on current quantum hardware where the number of available qubits and coherence times are limited.
+2. **Fallback Classical Routine:**
+   - For small semiprimes, the classical fallback (brute-force order finding) is computationally acceptable. However, for larger \( N \), a classical brute-force search becomes inefficient.
+   - A scalable version of Shor’s algorithm must rely entirely on quantum order-finding (with multiple repetitions and error-correction) rather than a classical search to maintain its exponential speedup over classical factorization methods.
 
-- **Noise and Decoherence**: As the number of qubits increases, the susceptibility of the quantum circuit to noise and errors increases as well. Quantum error correction techniques are still in development, and the scalability of Shor's algorithm is constrained by the current quality of qubits and gate operations available.
-
----
-
-### 4. **Novelty in the Approach**
-
-This implementation of Shor’s algorithm introduces several novel aspects:
-
-- **Quantum Rings Provider**: The code utilizes a third-party quantum provider (Quantum Rings) to access quantum resources, offering a unique approach for executing quantum circuits on a real backend or simulator.
-
-- **Dynamic Quantum Circuit Design**: The circuit is dynamically constructed based on the size of the input semiprime, and the number of qubits is automatically adjusted to the limits of the available quantum hardware, allowing the algorithm to scale in response to available resources.
-
-- **Advanced Visualization**: The circuit is not only executed but also visualized using both text-based and graphical representations. This helps in understanding the quantum gates used, the flow of the algorithm, and the impact of each operation.
-
-- **Gate Frequency Analysis**: The implementation provides an analysis of the quantum gates used in the algorithm, visualizing the frequency of each gate type in the circuit. This information is useful for understanding the quantum resources used in the algorithm and identifying areas for optimization.
+3. **Hardware Constraints:**
+   - Current quantum hardware is limited in the number of qubits and coherence times. Our approach, while simplified, highlights the resource trade-offs: more qubits allow for a more precise phase estimation but require more complex circuits that are prone to errors.
+   - Scalability will ultimately depend on advances in quantum error correction and the ability to build larger, more stable quantum processors.
 
 ---
 
-### 5. **Insights and Learnings**
+### Insights and Novelty
 
-- **Quantum Speedup**: Shor’s algorithm offers an exponential speedup over classical algorithms. While classical methods like trial division, Pollard’s rho, or the general number field sieve (GNFS) scale poorly for large semiprimes, Shor’s algorithm can factorize these numbers in polynomial time, potentially making quantum computing a powerful tool for cryptography in the future.
+1. **Hybrid Quantum-Classical Approach:**
+   - One of the key insights from our implementation is the effective integration of a quantum circuit with classical post-processing. Even though our quantum circuit for modular exponentiation is not fully implemented, the fallback mechanism ensures that the algorithm still produces correct factors.
+   - This hybrid approach mirrors many near-term quantum algorithms (such as the Variational Quantum Eigensolver) where quantum and classical resources are combined.
 
-- **Practical Limitations**: Even though the theoretical runtime of Shor’s algorithm is polynomial in the number of bits of \( N \), in practice, the availability of qubits and the quality of quantum gates remain the limiting factors. The current state of quantum hardware is far from capable of running Shor’s algorithm on large semiprimes (e.g., numbers used in RSA encryption).
+2. **Adaptive Candidate Selection:**
+   - Rather than sticking with a single fixed base \( a \), our algorithm dynamically iterates over candidate values until a valid order is found. This adaptability is important in practice because some choices of \( a \) may yield trivial or degenerate outcomes.
+   - By testing multiple candidate bases, our implementation improves the probability of success and highlights a strategy that will be essential when scaling to larger numbers.
 
-- **Error Correction and Fault Tolerance**: Quantum computers are currently prone to errors due to noise and decoherence. For large-scale quantum factoring, error correction schemes will be necessary. However, these techniques are resource-intensive and are not yet available at the scale needed for Shor’s algorithm on large semiprimes.
+3. **Visualization for Resource Analysis:**
+   - The visualization of performance metrics—execution time, total gate operations, and qubits used—provides valuable insights into how resource demands scale with problem size.
+   - Such an analysis helps in understanding the potential bottlenecks and informs future improvements, both in algorithmic design and in circuit optimization.
 
-- **Quantum Hardware Access**: The implementation demonstrates how quantum computing platforms like Quantum Rings can be used to access quantum circuits. However, the number of qubits available in real-world quantum processors is still a limiting factor for running large-scale Shor’s algorithm. The current limitations force a focus on smaller semiprimes or simulation-based testing.
-
----
-
-### 6. **Future Improvements**
-
-- **Quantum Error Correction**: As quantum error correction improves, larger semiprimes can be factorized with greater reliability. The inclusion of error-correction codes into Shor's algorithm would allow for better scalability and more robust results.
-
-- **Optimization**: There is potential for optimizing the quantum circuit further, such as improving gate operation sequences to reduce the number of gates needed and enhance the efficiency of the algorithm.
-
-- **Hybrid Algorithms**: A hybrid approach, combining classical and quantum techniques, could be employed to factor larger semiprimes. Classical pre- or post-processing might be used to reduce the complexity of the quantum operations.
-
-- **Use of Quantum Simulators**: For larger semiprimes, quantum simulators with more qubits could be employed to simulate Shor’s algorithm. However, these simulators are also limited by classical computational resources and cannot yet fully simulate the capabilities of a real quantum processor.
+4. **Educational and Research Value:**
+   - Even though our implementation is a simplified demonstration, it serves as an effective educational tool. It illustrates the core principles behind Shor’s algorithm and provides a clear roadmap of the quantum-classical workflow.
+   - The methodology and visualization tools can be extended or adapted for more sophisticated research projects, especially those targeting improvements in quantum modular exponentiation and error-corrected quantum computing.
 
 ---
 
-### 7. **Conclusion**
+### Conclusion
 
-This implementation of Shor’s algorithm demonstrates the potential of quantum computing for factoring large semiprimes. While there are still practical limitations due to current quantum hardware, the algorithm showcases how quantum resources can be used to achieve exponential speedups over classical methods. As quantum hardware continues to evolve, the scalability and practical applicability of Shor’s algorithm will improve, bringing us closer to realizing its full potential in the field of cryptography and number theory.
+Our approach demonstrates the essential structure of Shor's algorithm in a simplified, hybrid quantum-classical form. It provides a clear window into both the challenges and opportunities in quantum factorization—illustrating how quantum circuits, classical post-processing, and adaptive candidate selection all play a role. While the current implementation is limited to small semiprimes and uses placeholder elements, the insights gained lay a foundation for addressing the scalability challenges in future, fully quantum implementations.
+
