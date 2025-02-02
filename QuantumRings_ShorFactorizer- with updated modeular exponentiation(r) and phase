@@ -1,0 +1,292 @@
+import QuantumRingsLib
+from QuantumRingsLib import QuantumRegister, ClassicalRegister, QuantumCircuit
+from QuantumRingsLib import QuantumRingsProvider
+import math
+import time
+from math import gcd
+
+# Sample semiprimes with bit size.
+SEMIPRIMES = {
+    8: 143,
+    10: 899,
+    12: 3127,
+    14: 11009,
+    16: 47053,
+    18: 167659,
+    20: 744647,
+    22: 3036893,
+    24: 11426971,
+    26: 58949987,
+    28: 208241207,
+    30: 857830637,
+    32: 2776108693,
+    34: 11455067797,
+    36: 52734393667,
+    38: 171913873883,
+    40: 862463409547,
+    42: 2830354423669,
+    44: 12942106192073,
+    46: 53454475917779,
+    48: 255975740711783,
+    50: 696252032788709,
+    52: 3622511636491483,
+    54: 15631190744806271,
+    56: 51326462028714137,
+    58: 217320198167105543,
+    60: 827414216976034907,
+    62: 3594396771839811733,
+    64: 13489534701147995111,
+    66: 48998116978431560767,
+    68: 220295379750460962499,
+    70: 757619317101213697553,
+    72: 4239706985407101925109,
+    74: 13081178794322790282667,
+    76: 48581232636534199345531,
+    78: 263180236071092621088443,
+    80: 839063370715343025081359,
+    82: 3145102596907521247788809,
+    84: 13410747867593584234359179,
+    86: 74963308816794035875414187,
+    88: 196328049947816898123437813,
+    90: 900212494943030042797046797,
+    92: 3408479268382267351010110507,
+    94: 13410207519922000104514406009,
+    96: 56540697284955642837798912007,
+    98: 212736089539904961817389577063,
+    100: 793334180624272295351382130129,
+}
+
+
+class QuantumFactorizer:
+    def __init__(self, token, account_name):
+        """Initialize with Quantum Rings credentials."""
+        self.provider = QuantumRingsProvider(token=token, name=account_name)
+        self.backend = self.provider.get_backend("scarlet_quantum_rings")
+        self.max_qubits = 200
+        self.results = {}
+
+    def _iqft(self, qc, register, n):
+        """Inverse Quantum Fourier Transform (IQFT) on the first n qubits."""
+        for i in range(n):
+            for j in range(i):
+                qc.cu1(-math.pi / (2 ** (i - j)), register[j], register[i])
+            qc.h(register[i])
+        qc.barrier()
+
+    def _modular_exponentiation(self, qc, a, N, control_start, control_end, target_start, target_end):
+        """
+        Quantum Modular Exponentiation: apply the unitary that maps
+          |x>|1>  --> |x>|a^x mod N>
+        For demonstration purposes a placeholder is used. In a complete implementation,
+        you would replace this with a full modular exponentiation circuit.
+        """
+        n_control = control_end - control_start
+        # Put control register in superposition (if not already done)
+        for i in range(control_start, control_end):
+            qc.h(i)
+        qc.barrier()
+
+        # Simplified placeholder: apply controlled-X gates as a dummy operation.
+        for i in range(control_start, control_end):
+            for j in range(target_start, target_end):
+                qc.cx(i, j)
+        qc.barrier()
+
+    def build_shor_circuit(self, N, a):
+        """
+        Build the quantum circuit for Shor's algorithm.
+        Uses n qubits for phase estimation and additional qubits for modular exponentiation.
+        """
+        n = N.bit_length()
+        # A rough resource estimate: 2n qubits for QPE and n qubits for modular exponentiation, plus ancillas.
+        num_qubits = 3 * n + 2
+
+        if num_qubits > self.max_qubits:
+            raise ResourceWarning(f"Requires {num_qubits} qubits (max {self.max_qubits}).")
+
+        q = QuantumRegister(num_qubits, 'q')
+        # We measure the first 2n qubits (QPE register).
+        c = ClassicalRegister(2 * n, 'c')
+        qc = QuantumCircuit(q, c)
+
+        # Prepare QPE register: put first n qubits into superposition.
+        for i in range(n):
+            qc.h(q[i])
+        qc.barrier()
+
+        # Apply the modular exponentiation unitary.
+        self._modular_exponentiation(qc, a, N, n, 2 * n, 2 * n, 3 * n)
+        
+        # Apply the inverse QFT to the QPE register (first n qubits).
+        self._iqft(qc, q, n)
+
+        # Measure the QPE register.
+        for i in range(2 * n):
+            qc.measure(q[i], c[i])
+
+        return qc, num_qubits
+
+    # --- Quantum Post-Processing: Continued Fractions Methods ---
+    def _continued_fraction(self, x, max_iterations=20):
+        """Compute the continued fraction expansion of x."""
+        cf = []
+        for _ in range(max_iterations):
+            if x == 0:
+                break
+            a = int(1 / x)
+            cf.append(a)
+            x = 1 / x - a
+        return cf
+
+    def _convergents(self, cf):
+        """Generate convergents (numerator, denominator) from a continued fraction expansion."""
+        convergents = []
+        for i in range(1, len(cf) + 1):
+            num, den = 1, 0
+            for a in reversed(cf[:i]):
+                num, den = a * num + den, num
+            convergents.append((num, den))
+        return convergents
+
+    def _extract_order(self, measured_phase, N, a):
+        """
+        Given the measured phase (a float in [0,1)), use the continued fractions method
+        to extract a candidate order r.
+        """
+        cf = self._continued_fraction(measured_phase)
+        for num, den in self._convergents(cf):
+            # Candidate order must be positive and within a plausible bound.
+            if den < 1 or den > 2**(N.bit_length()):
+                continue
+            # Verify candidate order r by testing a^r mod N.
+            if pow(a, den, N) == 1:
+                return den
+        return None
+
+    def _try_factor_with_a(self, a, N):
+        """
+        Try to factor N using candidate base a.
+        This version uses quantum phase estimation and extracts the period using
+        continued fractions.
+        """
+        n = N.bit_length()
+
+        # Build the quantum circuit.
+        qc, qubits_used = self.build_shor_circuit(N, a)
+        # Increase shots to improve statistics.
+        shots = 1024  
+        job = self.backend.run(qc, shots=shots)
+        while not job.done():
+            time.sleep(1)
+        result = job.result()
+        counts = result.get_counts()
+
+        # Process the measurement outcomes.
+        # (For simplicity, choose the most frequent outcome.)
+        measured_str = max(counts, key=counts.get)
+        measured_int = int(measured_str, 2)
+        # The QPE register has size n; convert the measured value into a phase.
+        phase_estimate = measured_int / (2 ** n)
+        print(f"Measured phase (approx): {phase_estimate}")
+
+        # Extract the period (order) r using continued fractions.
+        r = self._extract_order(phase_estimate, N, a)
+        print(f"Extracted order r: {r}")
+        if r is None or r % 2 != 0:
+            return None, qubits_used
+
+        # Compute x = a^(r/2) mod N.
+        x = pow(a, r // 2, N)
+        if x == N - 1:
+            return None, qubits_used
+
+        # Compute the candidate factors.
+        factor1 = gcd(x - 1, N)
+        factor2 = gcd(x + 1, N)
+        if 1 < factor1 < N:
+            return (factor1, N // factor1), qubits_used
+        if 1 < factor2 < N:
+            return (factor2, N // factor2), qubits_used
+
+        return None, qubits_used
+
+    def factor(self, N, attempts=3):
+        """
+        Factors a semiprime integer using Shor's algorithm.
+        All period finding is done via quantum post-processing.
+        """
+        start_time = time.time()
+
+        factors = None
+        qubits_used = None
+        # Try candidate a values starting from 2.
+        for a in range(2, N):
+            if gcd(a, N) != 1:
+                continue  # Skip if a shares a factor with N.
+            print(f"\nTrying candidate a = {a} for N = {N} ...")
+            factors, qubits_used = self._try_factor_with_a(a, N)
+            if factors is not None:
+                break
+
+        if factors is None:
+            factors = ("Failed", "to find valid factors")
+
+        execution_time = time.time() - start_time
+        # Count gate operations from the quantum circuit.
+        # (Rebuild the circuit to get the op counts.)
+        try:
+            gate_ops = self.build_shor_circuit(N, a)[0].count_ops()
+        except Exception:
+            gate_ops = {}
+
+        return {
+            'N': N,
+            'factors': factors,
+            'qubits_used': qubits_used,
+            'gate_operations': gate_ops,
+            'execution_time': execution_time,
+        }
+
+    def run_challenge(self, start_bit=8):
+        """Runs the factorization challenge across semiprimes."""
+        results = []
+
+        for bit_size, N in sorted(SEMIPRIMES.items()):
+            if bit_size < start_bit:
+                continue
+
+            print(f"\nFactoring {bit_size}-bit semiprime: {N}")
+            result = self.factor(N)
+            results.append(result)
+            print(f"✅ Factors: {result['factors']}")
+            print(f"🔢 Qubits used: {result['qubits_used']}")
+            print(f"⏳ Execution time: {result['execution_time']:.2f}s")
+            print(f"🔧 Gate operations: {result['gate_operations']}")
+
+        return results
+
+
+# ======================
+# Execution
+# ======================
+if __name__ == "__main__":
+    # Replace with your Quantum Rings API token and account name.
+    QR_TOKEN = "rings-200.3EznhwmgP4p2Vb3D13XbJZ7kaDOV3PoY"
+    QR_ACCOUNT = "jayachandiran.ece@sairam.edu.in"
+
+    factorizer = QuantumFactorizer(QR_TOKEN, QR_ACCOUNT)
+    results = factorizer.run_challenge(start_bit=8)
+
+    # Display the results in a table format.
+    print("\nResults Summary:")
+    header = f"{'Bit Size':<12}{'Semiprime (N)':<20}{'Prime Factors':<25}{'Qubits Used':<15}{'Gate Operations':<20}{'Execution Time (s)'}"
+    print(header)
+    print("-" * len(header))
+    for result in results:
+        prime_factors = str(result['factors'])
+        # If gate_operations is a dict, sum the total gate count.
+        if isinstance(result['gate_operations'], dict):
+            total_gates = sum(result['gate_operations'].values())
+        else:
+            total_gates = "N/A"
+        print(f"{result['N'].bit_length():<12}{result['N']:<20}{prime_factors:<25}{result['qubits_used']:<15}{total_gates:<20}{result['execution_time']:.2f}")
