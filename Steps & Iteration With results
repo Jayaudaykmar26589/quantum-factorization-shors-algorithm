@@ -1,0 +1,84 @@
+Factoring 8-bit semiprime: 143
+Trying a = 2 ...
+✅ Factors: (11, 13)
+🔢 Qubits used: 26
+⏳ Execution time: 1.00s
+🔧 Gate operations: {'barrier': 78, 'cu1': 28, 'cx': 64, 'h': 24, 'measure': 16}
+
+Factoring 10-bit semiprime: 899
+Trying a = 2 ...
+✅ Factors: (31, 29)
+🔢 Qubits used: 32
+⏳ Execution time: 1.00s
+🔧 Gate operations: {'barrier': 96, 'cu1': 45, 'cx': 100, 'h': 30, 'measure': 20}
+
+Factoring 12-bit semiprime: 3127
+Trying a = 2 ...
+✅ Factors: (59, 53)
+🔢 Qubits used: 38
+⏳ Execution time: 1.00s
+🔧 Gate operations: {'barrier': 114, 'cu1': 66, 'cx': 144, 'h': 36, 'measure': 24}
+
+Factoring 14-bit semiprime: 11009
+Trying a = 2 ...
+Trying a = 3 ...
+✅ Factors: (109, 101)
+🔢 Qubits used: 44
+⏳ Execution time: 2.00s
+🔧 Gate operations: {'barrier': 132, 'cu1': 91, 'cx': 196, 'h': 42, 'measure': 28}
+
+Factoring 16-bit semiprime: 47053
+Trying a = 2 ...
+✅ Factors: (223, 211)
+🔢 Qubits used: 50
+⏳ Execution time: 1.01s
+🔧 Gate operations: {'barrier': 150, 'cu1': 120, 'cx': 256, 'h': 48, 'measure': 32}
+
+Factoring 18-bit semiprime: 167659
+Trying a = 2 ...
+✅ Factors: (431, 389)
+🔢 Qubits used: 56
+⏳ Execution time: 1.02s
+🔧 Gate operations: {'barrier': 168, 'cu1': 153, 'cx': 324, 'h': 54, 'measure': 36}
+
+Factoring 20-bit semiprime: 744647
+Trying a = 2 ...
+✅ Factors: (907, 821)
+🔢 Qubits used: 62
+⏳ Execution time: 1.44s
+🔧 Gate operations: {'barrier': 186, 'cu1': 190, 'cx': 400, 'h': 60, 'measure': 40}
+
+Factoring 22-bit semiprime: 3036893
+Trying a = 2 ...
+✅ Factors: (1777, 1709)
+🔢 Qubits used: 68
+⏳ Execution time: 1.01s
+🔧 Gate operations: {'barrier': 204, 'cu1': 231, 'cx': 484, 'h': 66, 'measure': 44}
+
+Factoring 24-bit semiprime: 11426971
+Trying a = 2 ...
+✅ Factors: (3191, 3581)
+🔢 Qubits used: 74
+⏳ Execution time: 1.04s
+🔧 Gate operations: {'barrier': 222, 'cu1': 276, 'cx': 576, 'h': 72, 'measure': 48}
+
+Factoring 26-bit semiprime: 58949987
+Trying a = 2 ...
+✅ Factors: (8039, 7333)
+🔢 Qubits used: 80
+⏳ Execution time: 16.12s
+🔧 Gate operations: {'barrier': 240, 'cu1': 325, 'cx': 676, 'h': 78, 'measure': 52}
+
+Factoring 28-bit semiprime: 208241207
+Trying a = 2 ...
+✅ Factors: (15727, 13241)
+🔢 Qubits used: 86
+⏳ Execution time: 28.96s
+🔧 Gate operations: {'barrier': 258, 'cu1': 378, 'cx': 784, 'h': 84, 'measure': 56}
+
+Factoring 30-bit semiprime: 857830637
+Trying a = 2 ...
+✅ Factors: (29167, 29411)
+🔢 Qubits used: 92
+⏳ Execution time: 280.63s
+🔧 Gate operations: {'barrier': 276, 'cu1': 435, 'cx': 900, 'h': 90, 'measure': 60}
