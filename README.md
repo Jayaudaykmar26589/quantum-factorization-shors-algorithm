@@ -17,5 +17,5 @@ This repository implements Shor's Algorithm to factor semiprimes using the Quant
 Shor's algorithm is a quantum algorithm that efficiently factors large numbers. It uses quantum parallelism to find the period of a modular exponential function, which is used to discover the prime factors of a semiprime number.
 
 ## Quantum Rings Email:
-- Your email address used for registration (e.g., `jayachandiran.ece@sairam.edu.in`)
+- Your email address used for registration (e.g., `ujayachandiran@gmail.com`)
 
